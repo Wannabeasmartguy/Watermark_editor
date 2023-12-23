@@ -34,7 +34,7 @@ def add_watermark_to_pdf(input_pdf,
     page_height = first_page.mediabox[3]
 
     # Create a PDF for the watermark
-    c = canvas.Canvas("watermark.pdf", pagesize=(page_width, page_height))
+    c = canvas.Canvas(r"tmp\watermark.pdf", pagesize=(page_width, page_height))
     c.setFont("Times-Roman", watermark_size)
     c.setFillAlpha(watermark_opacity)
     
@@ -56,7 +56,7 @@ def add_watermark_to_pdf(input_pdf,
     pdf_writer = PdfWriter()
 
     # Add watermark to each page
-    watermark_pdf = PdfReader("watermark.pdf")
+    watermark_pdf = PdfReader(r"tmp\watermark.pdf")
     watermark_page = watermark_pdf.pages[0]
 
     for page in original_pdf.pages:
@@ -69,7 +69,7 @@ def add_watermark_to_pdf(input_pdf,
     with open(output_pdf, 'wb') as output_file:
         pdf_writer.write(output_file)
 
-def preview_watermarked_pdf_page(#page_number=0
+def preview_watermarked_pdf_page(output_pdf:str
                                 ):
     """
     Convert the specified page of a PDF file to a numpy array or PIL image for preview.
@@ -83,15 +83,16 @@ def preview_watermarked_pdf_page(#page_number=0
     """
     # Convert the specified page of the PDF to an image
     page_number=0
-    images = convert_from_path("output.pdf", first_page=page_number + 1, last_page=page_number + 1)
+    images = convert_from_path(output_pdf, 
+                               first_page=page_number + 1, 
+                               last_page=page_number + 1,
+                               poppler_path=r"poppler-0.68.0\bin")
     
     # Since we are converting only one page, we'll get only one image in the list
     image = images[0]
+    image.save(r"tmp\preview.jpg", 'JPEG')
     
     return image
-
-# Example usage:
-# add_watermark_to_pdf(r'input.pdf', 'output.pdf', 'CONFIDENTIAL', 30, 0.4)
 
 with gr.Blocks() as demo:
     file_choose = gr.File(label="选择PDF文件",
@@ -109,24 +110,6 @@ with gr.Blocks() as demo:
     gen.click(add_watermark_to_pdf,
             inputs=[file_choose,output_pdf,watermark_text,watermark_size,watermark_opacity,]
             ).then(preview_watermarked_pdf_page,
-                    outputs=pdf_preview)
+                   inputs=output_pdf).then(lambda :gr.Image(value=r"tmp\preview.jpg"),outputs=[pdf_preview])
 
 demo.queue().launch(inbrowser=True,debug=True,show_api=False)
-
-'''
-下面是非 Gradio 测试
-
-
-image = preview_watermarked_pdf_page('output.pdf', 0)
-
-# To display the image using PIL
-image.show()
-
-# To convert the image to a numpy array and display using matplotlib (if needed)
-import matplotlib.pyplot as plt
-
-image_np = np.array(image)
-plt.imshow(image_np)
-plt.axis('off')  # Hide the axis
-plt.show()
-'''
